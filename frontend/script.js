@@ -1,16 +1,10 @@
-```javascript
 const form = document.getElementById("predictionForm");
 
 const button = document.getElementById("predictButton");
+const buttonText = document.getElementById("buttonText");
 
-const buttonText =
-    document.getElementById("buttonText");
-
-const resultTitle =
-    document.getElementById("resultTitle");
-
-const resultMessage =
-    document.getElementById("resultMessage");
+const resultTitle = document.getElementById("resultTitle");
+const resultMessage = document.getElementById("resultMessage");
 
 const probabilityValue =
     document.getElementById("probabilityValue");
@@ -22,37 +16,50 @@ const resultStatus =
     document.getElementById("resultStatus");
 
 
-form.addEventListener("submit", async function(event) {
+/* =====================================================
+   CHECK ELEMENTS
+===================================================== */
+
+if (!form) {
+    console.error("predictionForm not found");
+}
+
+if (!button) {
+    console.error("predictButton not found");
+}
+
+
+/* =====================================================
+   FORM SUBMIT
+===================================================== */
+
+form.addEventListener("submit", async function (event) {
 
     event.preventDefault();
 
+    console.log("Analyze button clicked");
 
-    /* =========================
+
+    /* =================================================
        LOADING
-    ========================== */
+    ================================================= */
 
     button.disabled = true;
 
     buttonText.textContent = "Analyzing...";
 
 
-    /* =========================
-       GET FORM DATA
-    ========================== */
+    /* =================================================
+       COLLECT FORM DATA
+    ================================================= */
 
     const data = {
 
-        age: Number(
-            document.getElementById("age").value
-        ),
+        age: Number(document.getElementById("age").value),
 
-        sex: Number(
-            document.getElementById("sex").value
-        ),
+        sex: Number(document.getElementById("sex").value),
 
-        cp: Number(
-            document.getElementById("cp").value
-        ),
+        cp: Number(document.getElementById("cp").value),
 
         trestbps: Number(
             document.getElementById("trestbps").value
@@ -97,50 +104,92 @@ form.addEventListener("submit", async function(event) {
     };
 
 
-    /* =========================
-       SEND TO FLASK
-    ========================== */
+    console.log("Data being sent:");
+    console.log(data);
+
+
+    /* =================================================
+       SEND DATA TO FLASK
+    ================================================= */
 
     try {
 
-        const response = await fetch(
-            "/api/predict",
-            {
-                method: "POST",
+        const response = await fetch("/api/predict", {
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+            method: "POST",
 
-                body: JSON.stringify(data)
-            }
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(data)
+
+        });
+
+
+        console.log(
+            "API response status:",
+            response.status
         );
 
+
+        /* =============================================
+           READ RESPONSE
+        ============================================= */
 
         const result = await response.json();
 
 
-        /* =========================
-           ERROR
-        ========================== */
+        console.log("API response:");
+        console.log(result);
+
+
+        /* =============================================
+           CHECK API ERROR
+        ============================================= */
 
         if (!response.ok) {
 
             throw new Error(
                 result.error ||
-                "Prediction failed"
+                "Prediction request failed."
             );
 
         }
 
 
-        /* =========================
-           PROBABILITY
-        ========================== */
+        /* =============================================
+           GET RESULT
+        ============================================= */
+
+        const prediction =
+            Number(result.prediction);
 
         const probability =
             Number(result.probability);
 
+
+        if (isNaN(prediction)) {
+
+            throw new Error(
+                "Invalid prediction received from server."
+            );
+
+        }
+
+
+        if (isNaN(probability)) {
+
+            throw new Error(
+                "Invalid probability received from server."
+            );
+
+        }
+
+
+        /* =============================================
+           SHOW PROBABILITY
+        ============================================= */
 
         probabilityValue.textContent =
             probability.toFixed(1) + "%";
@@ -150,11 +199,11 @@ form.addEventListener("submit", async function(event) {
             probability + "%";
 
 
-        /* =========================
-           RESULT
-        ========================== */
+        /* =============================================
+           SHOW PREDICTION
+        ============================================= */
 
-        if (Number(result.prediction) === 1) {
+        if (prediction === 1) {
 
             resultTitle.textContent =
                 "Higher Risk Indicated";
@@ -173,56 +222,64 @@ form.addEventListener("submit", async function(event) {
         }
 
 
+        /* =============================================
+           STATUS
+        ============================================= */
+
         resultStatus.innerHTML =
             "<span>●</span> Model result generated";
 
 
-        /* =========================
-           MOBILE SCROLL
-        ========================== */
+        /* =============================================
+           SCROLL TO RESULT
+        ============================================= */
 
-        if (window.innerWidth < 1000) {
+        const resultCard =
+            document.querySelector(".result-card");
 
-            document
-                .querySelector(".result-card")
-                .scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
+        if (resultCard && window.innerWidth < 1000) {
+
+            resultCard.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
 
         }
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Prediction error:",
+            error
+        );
 
+
+        /* =============================================
+           SHOW ERROR
+        ============================================= */
 
         resultTitle.textContent =
-            "Something went wrong";
-
+            "Prediction Error";
 
         resultMessage.textContent =
             error.message;
 
-
         probabilityValue.textContent =
             "--%";
-
 
         progressBar.style.width =
             "0%";
 
-
         resultStatus.innerHTML =
-            "<span>●</span> Prediction error";
+            "<span>●</span> Prediction failed";
 
     }
 
 
-    /* =========================
+    /* =================================================
        RESET BUTTON
-    ========================== */
+    ================================================= */
 
     button.disabled = false;
 
@@ -230,4 +287,3 @@ form.addEventListener("submit", async function(event) {
         "Analyze Heart Risk";
 
 });
-```
